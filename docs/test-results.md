@@ -28,3 +28,5 @@ The two skipped tests exercise real LiveKit JWT grants/signature and webhook bod
 A complete backend Composer lock and frontend npm lock could not be generated with full integrations. Resolve the declared packages on a network-enabled host, commit reviewed lockfiles, run dependency audits and all checks, then follow the staging acceptance/load-test instructions in [deployment.md](deployment.md). The installed cached vendor directory is ignored and is not part of the source deliverable.
 
 Read the stale-token limitation in [architecture.md](architecture.md). A still-valid self-hosted LiveKit token may reconnect briefly after room deletion before a webhook removes it. This is not verified immediate revocation, and must be resolved for strict public-service requirements.
+
+Both source repositories were pushed successfully to the requested GitHub remotes on `main`. Credential scans passed before pushing. GitHub Actions workflows are included; their remote execution results were not inspected in this workspace.

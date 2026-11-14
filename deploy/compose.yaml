@@ -11,11 +11,21 @@ services:
   livekit:
     image: livekit/livekit-server:v1.9.0
     restart: unless-stopped
-    command: ["--config", "/etc/livekit.yaml"]
     environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        log_level: info
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: false
+          node_ip: 127.0.0.1
+        webhook:
+          api_key: ${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY}
+          urls:
+            - http://host.docker.internal:8000/api/v1/livekit/webhook
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET:?Set LIVEKIT_API_SECRET}"
     ports: ["7880:7880", "7881:7881", "7882:7882/udp"]
     extra_hosts: ["host.docker.internal:host-gateway"]
-    volumes: ["./livekit.local.yaml:/etc/livekit.yaml:ro"]
 volumes:
   redis-data:
