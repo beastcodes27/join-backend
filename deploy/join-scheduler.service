@@ -1,0 +1,11 @@
+[Unit]
+Description=Join Meeting scheduler
+[Service]
+Type=oneshot
+User=www-data
+WorkingDirectory=/srv/join-meeting/backend
+ExecStart=/usr/bin/php artisan schedule:run
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/join-meeting/backend/storage /srv/join-meeting/backend/bootstrap/cache /var/lib/join-meeting

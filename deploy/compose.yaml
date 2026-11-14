@@ -1,0 +1,21 @@
+name: join-meeting
+services:
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["sh", "-ec", 'exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in deploy/.env}
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: ["redis-data:/data"]
+  livekit:
+    image: livekit/livekit-server:v1.9.0
+    restart: unless-stopped
+    command: ["--config", "/etc/livekit.yaml"]
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET:?Set LIVEKIT_API_SECRET}"
+    ports: ["7880:7880", "7881:7881", "7882:7882/udp"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: ["./livekit.local.yaml:/etc/livekit.yaml:ro"]
+volumes:
+  redis-data:

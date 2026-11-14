@@ -1,58 +1,69 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Join Meeting API · DevTZ
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel REST API for **Join Meeting — Connect anywhere. Meet everyone.** The paired frontend is [join-meet-](https://github.com/beastcodes27/join-meet-). This repository uses SQLite following the project owner's preference. It is implementation work for a private beta, not a production-readiness claim.
 
-## About Laravel
+## Prerequisites
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+PHP 8.4+ with SQLite/PDO SQLite, mbstring, XML, curl, openssl, sodium, bcmath, zip, and Redis extensions; Composer 2; Node 22.19+ (24 recommended) for the paired frontend. Docker is optional for local Redis and LiveKit. Real Google sign-in needs a Firebase project with Google enabled. Real media needs a reachable LiveKit server and server credentials.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Local setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+1. Clone this repository beside the frontend checkout.
+2. `composer install` (full SDK resolution requires network access; see verification note below).
+3. `cp .env.example .env` and `php artisan key:generate`.
+4. Create `database/database.sqlite` and run `php artisan migrate`. Leave `DB_DATABASE` empty for the default file. Never serve this directory publicly.
+5. Configure Firebase and LiveKit as described below. Set `FRONTEND_URL` to the exact browser origin.
+6. Optional: `cp deploy/.env.example deploy/.env`, fill independent generated Redis and LiveKit credentials, then `docker compose --env-file deploy/.env -f deploy/compose.yaml up -d`.
+7. Start Laravel with `php artisan serve --host=0.0.0.0 --port=8000`. Binding to all interfaces is required for the local Docker webhook to reach the host; use a trusted local network. Start the frontend on localhost:5173 with its Vite proxy.
+8. Run `php artisan schedule:work` in another terminal. If using queued jobs, run `php artisan queue:work` too. Sessions/cache can stay file-backed in local development.
 
-## Learning Laravel
+The local LiveKit config advertises loopback and is only for same-machine checks. For different devices and networks, use HTTPS/WSS and a public LiveKit/TURN deployment, or LiveKit Cloud. Do not deploy the local YAML publicly. Room events must reach `/api/v1/livekit/webhook`; lifecycle and stale-join removal rely on these trusted events.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Firebase setup
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Enable Google in Firebase Authentication, configure allowed browser domains, and use its web-app settings in the frontend's untracked `.env`. Store the Admin service-account JSON outside the checkout and outside any public root, with restrictive file permissions. Set `FIREBASE_CREDENTIALS` to its absolute path and `FIREBASE_PROJECT_ID` to the same project as the frontend. Enable the relevant APIs for checking revoked sessions. Never put Admin credentials or a service-account JSON into Vite variables.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Environment variables
 
-## Agentic Development
+| Variable | Purpose |
+|---|---|
+| `APP_NAME` | Application label |
+| `APP_ENV` | `local` or `production` |
+| `APP_KEY` | Generated by `artisan key:generate`; encrypts cookies/session data. Never rotate without a migration plan |
+| `APP_DEBUG` | False for deployments; true only for private local debugging |
+| `APP_URL` | Public API origin; production uses the frontend origin |
+| `FRONTEND_URL` | Exact CORS origin and base for shareable meeting links |
+| `DB_CONNECTION` | `sqlite` |
+| `DB_DATABASE` | Absolute production file path; empty selects `database/database.sqlite` |
+| `SESSION_DRIVER` | `file` locally; `redis` in production |
+| `SESSION_LIFETIME` | Inactivity timeout in minutes; absolute auth expiry is also enforced at two hours |
+| `SESSION_ENCRYPT` | Encrypt session payloads |
+| `SESSION_SECURE_COOKIE` | True for HTTPS production; false only for local HTTP |
+| `SESSION_HTTP_ONLY` | True; JavaScript cannot access app session cookies |
+| `SESSION_SAME_SITE` | `lax`; keep frontend and API on the same origin |
+| `CACHE_STORE` | `file` locally; `redis` in production for reliable rate limits |
+| `QUEUE_CONNECTION` | `database` locally; `redis` in production |
+| `REDIS_CLIENT` | `phpredis`, matching the installed PHP extension |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | Redis location and secret; do not expose Redis publicly |
+| `LOG_CHANNEL`, `LOG_LEVEL` | Operational log destination and verbosity; never log tokens or media |
+| `FIREBASE_CREDENTIALS` | Server-only absolute path to service-account JSON |
+| `FIREBASE_PROJECT_ID` | Verified Firebase project/audience |
+| `LIVEKIT_URL` | Browser-reachable WSS endpoint in production |
+| `LIVEKIT_HTTP_URL` | Server-reachable HTTPS or private HTTP room API |
+| `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | Server-only signing and room-management credentials |
+| `MEETING_MAX_PARTICIPANTS` | Capacity ceiling, default 12; validate actual media resources |
+| `MEETING_MAX_MINUTES` | Lifetime from creation, default 60; scheduler enforces expiry |
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+All credential fields in tracked examples are empty. `deploy/.env` uses the Redis/LiveKit variables above. Production deployment-template variables are documented in [deployment.md](docs/deployment.md).
 
-```bash
-composer require laravel/boost --dev
+## Verification
 
-php artisan boost:install
-```
+- `php artisan test --compact`
+- `vendor/bin/pint --dirty --format agent`
+- `python3 scripts/check-secrets.py` (scans reachable Git history without printing secret values)
+- `php artisan route:list --path=api`
+- `composer validate` and `composer audit` once full dependencies can be installed
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+See [test-results.md](docs/test-results.md) for actual results and blocked checks. Firebase and LiveKit integration packages were unavailable in the restricted build environment. The cached framework was used to test application boundaries with mocks; this does not verify live sign-in or media. The complete Composer manifest declares both SDKs. A complete dependency lock could not be generated; resolve, audit, and commit it before deployment.
 
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+See [architecture](docs/architecture.md), [API contract](docs/api.md), and [VPS deployment](docs/deployment.md). Review the documented stale-token revocation window before any public launch.

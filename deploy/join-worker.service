@@ -1,0 +1,15 @@
+[Unit]
+Description=Join Meeting Laravel queue worker
+After=network.target
+[Service]
+User=www-data
+WorkingDirectory=/srv/join-meeting/backend
+ExecStart=/usr/bin/php artisan queue:work --sleep=3 --tries=3 --timeout=60
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/join-meeting/backend/storage /srv/join-meeting/backend/bootstrap/cache /var/lib/join-meeting
+[Install]
+WantedBy=multi-user.target
