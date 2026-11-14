@@ -31,6 +31,8 @@ class WebhookController extends Controller
             $ended = $meeting->status === 'ended' || $meeting->expires_at->isPast();
             if ($ended && in_array($event['event'], ['room_started', 'participant_joined'])) {
                 $livekit->deleteRoom($meeting->uuid);
+            } elseif (isset($event['room']['sid']) && $meeting->livekit_sid && $event['room']['sid'] !== $meeting->livekit_sid) {
+                // Delayed events from an older incarnation must not mutate the current room.
             } elseif ($event['event'] === 'participant_joined') {
                 if (! $participant || $participant->removed_at || $participant->lease_until?->isPast()) {
                     $livekit->remove($meeting->uuid, $identity);

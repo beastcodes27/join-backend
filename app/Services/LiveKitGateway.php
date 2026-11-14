@@ -17,9 +17,9 @@ class LiveKitGateway
         return new RoomServiceClient(config('meeting.livekit_http_url'), config('meeting.livekit_key'), config('meeting.livekit_secret'));
     }
 
-    public function ensureRoom(Meeting $meeting): void
+    public function ensureRoom(Meeting $meeting): string
     {
-        $this->client()->createRoom(new RoomCreateOptions(['name' => $meeting->uuid, 'maxParticipants' => $meeting->max_participants, 'emptyTimeout' => 300, 'departureTimeout' => 60]));
+        return $this->client()->createRoom(new RoomCreateOptions(['name' => $meeting->uuid, 'maxParticipants' => $meeting->max_participants, 'emptyTimeout' => 300, 'departureTimeout' => 60]))->getSid();
     }
 
     public function token(Meeting $meeting, string $identity, string $name): string

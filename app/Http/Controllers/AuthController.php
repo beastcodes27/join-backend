@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Contracts\IdentityVerifier;
 use App\Http\Requests\FirebaseLoginRequest;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    public function login(FirebaseLoginRequest $request, IdentityVerifier $verifier)
+    public function login(FirebaseLoginRequest $request, IdentityVerifier $verifier): JsonResponse
     {
         $profile = $verifier->verify($request->validated('id_token'));
         // Only the verified UID links accounts. Never merge accounts by a client-supplied email.
@@ -25,12 +27,12 @@ class AuthController extends Controller
         return response()->json(['user' => $user]);
     }
 
-    public function me(Request $request)
+    public function me(Request $request): JsonResponse
     {
-        return ['user' => $request->user()];
+        return response()->json(['user' => $request->user()]);
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request): Response
     {
         Auth::guard('web')->logout();
         $request->session()->invalidate();

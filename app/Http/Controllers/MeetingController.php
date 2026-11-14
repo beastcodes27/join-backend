@@ -70,7 +70,8 @@ class MeetingController extends Controller
             })->count();
             abort_if($reserved >= $meeting->max_participants, 409, 'This meeting is full. Try again when someone leaves.');
             try {
-                $this->livekit->ensureRoom($meeting);
+                $roomSid = $this->livekit->ensureRoom($meeting);
+                $meeting->update(['livekit_sid' => $roomSid]);
                 $token = $this->livekit->token($meeting, $identity, $data['display_name']);
             } catch (\Throwable $e) {
                 report($e);

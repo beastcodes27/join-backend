@@ -24,7 +24,7 @@ class MeetingApiTest extends TestCase
         parent::setUp();
         $this->host = User::factory()->create();
         $gateway = Mockery::mock(LiveKitGateway::class);
-        $gateway->shouldReceive('ensureRoom')->andReturnNull()->byDefault();
+        $gateway->shouldReceive('ensureRoom')->andReturn(bin2hex(random_bytes(12)))->byDefault();
         $gateway->shouldReceive('token')->andReturn(bin2hex(random_bytes(32)))->byDefault();
         $gateway->shouldReceive('deleteRoom', 'remove')->andReturnNull()->byDefault();
         $this->app->instance(LiveKitGateway::class, $gateway);
@@ -220,6 +220,8 @@ class MeetingApiTest extends TestCase
     public function test_join_requests_are_rate_limited(): void
     {
         $m = $this->meeting();
+        $this->withSession(['guest_identifier' => (string) Str::uuid()]);
+        $this->withCredentials()->withCookie(config('session.cookie'), session()->getId());
         for ($i = 0; $i < 30; $i++) {
             $this->postJson($this->path($m, 'join'), ['display_name' => 'Guest'])->assertForbidden();
         }
@@ -266,12 +268,21 @@ class MeetingApiTest extends TestCase
         $this->postJson('/api/v1/livekit/webhook', [])->assertNoContent();
         $this->postJson('/api/v1/livekit/webhook', [])->assertNoContent();
         $this->assertSame('active', $m->fresh()->status);
-        $this->assertDatabaseCount('meeting_events',1);
+        $this->assertDatabaseCount('meeting_events', 1);
+    }
+
+    public function test_delayed_finish_from_an_old_room_does_not_close_current_room(): void
+    {
+        $m = $this->meeting(['status' => 'active', 'livekit_sid' => 'current-room']);
+        $event = ['id' => bin2hex(random_bytes(16)), 'event' => 'room_finished', 'createdAt' => time(), 'room' => ['name' => $m->uuid, 'sid' => 'old-room']];
+        $this->app->instance(LiveKitGateway::class, Mockery::mock(LiveKitGateway::class)->shouldReceive('webhook')->andReturn($event)->getMock());
+        $this->postJson('/api/v1/livekit/webhook', [])->assertNoContent();
+        $this->assertSame('active', $m->fresh()->status);
     }
 
     public function test_invalid_webhook_signature_is_rejected(): void
     {
-        $this->app->instance(LiveKitGateway::class,Mockery::mock(LiveKitGateway::class)->shouldReceive('webhook')->andThrow(new \RuntimeException('Invalid signature'))->getMock());
-        $this->postJson('/api/v1/livekit/webhook',[])->assertUnauthorized();
+        $this->app->instance(LiveKitGateway::class, Mockery::mock(LiveKitGateway::class)->shouldReceive('webhook')->andThrow(new \RuntimeException('Invalid signature'))->getMock());
+        $this->postJson('/api/v1/livekit/webhook', [])->assertUnauthorized();
     }
 }
