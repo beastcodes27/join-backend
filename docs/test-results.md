@@ -49,3 +49,9 @@ The backend now supports explicitly enabled Google REST token lookup for local d
 The local Redis publish port is now configurable through `JOIN_REDIS_PORT` (default 6387), with the same value written to Laravel's ignored `REDIS_PORT`. The rendered Compose configuration was validated as loopback-only `127.0.0.1:6387` to container port 6379, with matching application credentials. Existing services on port 6379 are not managed by this launcher.
 
 After the SDK dependencies became available, the suite reports **65 tests: 64 passed, 1 skipped, 231 assertions**. Real LiveKit token permission/signature checks pass. The real webhook fixture was corrected to include a non-joining grant and to send its Authorization header through the raw HTTP test request. Its full protobuf body-integrity check remains skipped because this PHP runtime lacks BCMath. The startup script now explicitly requires BCMath before starting services. Container recreation and live media still require the user's regular terminal with Docker access.
+
+## Custom PHP launcher correction
+
+BCMath was installed successfully, but the user-selected PHP wrapper forced a custom INI scan directory that omitted its configuration and loaded mysqli before mysqlnd. The local launcher now generates an ignored, project-scoped PHP wrapper and module configuration, preserving the custom SQLite extension paths while loading installed BCMath and ordering MySQL dependencies correctly. System and user-wide PHP files are unchanged.
+
+With that project runtime: **65 backend tests passed, 235 assertions, no skips**. BCMath, mysqli, mysqlnd, PDO and pdo_sqlite load without startup warnings. Real LiveKit token grants and signed/tampered webhook checks now run successfully. This verifies SDK integration boundaries; live browser media and Docker startup remain separate checks requiring an unrestricted terminal.

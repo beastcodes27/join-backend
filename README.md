@@ -18,7 +18,7 @@ It generates matching local Redis/LiveKit credentials in ignored, permission-res
 
 Project Redis uses host port `6387` to avoid occupying another application's default Redis port. Set `JOIN_REDIS_PORT` in the ignored `deploy/.env` to choose another port; the helper synchronizes Laravel's `REDIS_PORT`. Redis keeps its internal container port `6379`. After a port-allocation error, rerun the startup script to recreate this project's Redis container with the corrected mapping.
 
-The launcher checks for PHP BCMath, which LiveKit's protobuf messages require. If missing on Ubuntu with PHP 8.4, install `php8.4-bcmath` and enable it for the CLI and any PHP-FPM runtime before restarting the launcher.
+The launcher creates a project-scoped PHP configuration under ignored `storage/app/private/php-cli`, preserving the selected PHP runtime's extensions (including custom SQLite modules), ordering `mysqlnd` before `mysqli`, and loading an installed BCMath module. It does not change system PHP files or your user-wide launcher. The launcher checks for PHP BCMath, which LiveKit's protobuf messages require. If missing on Ubuntu with PHP 8.4, install `php8.4-bcmath` and enable it for the CLI and any PHP-FPM runtime before restarting the launcher.
 
 ## Local setup
 

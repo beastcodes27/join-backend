@@ -19,6 +19,8 @@ for dependency in php composer node npm python3 docker curl setsid; do
 done
 [[ -f "$frontend_dir/package.json" ]] || { echo 'Frontend checkout not found. Set JOIN_FRONTEND_DIR to its directory.' >&2; exit 1; }
 cd -- "$backend_dir"
+php_runtime_bin="$(python3 scripts/prepare-php-runtime.py)"
+export PATH="$php_runtime_bin:$PATH"
 python3 scripts/prepare-local-env.py
 if ! php -r 'exit(extension_loaded("bcmath") ? 0 : 1);'; then
     echo "PHP BCMath is required by LiveKit. Install/enable the BCMath extension for your PHP version (for PHP 8.4 on Ubuntu: sudo apt install php8.4-bcmath), then rerun this script." >&2
