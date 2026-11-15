@@ -11,6 +11,12 @@ class FirebaseIdentityVerifier implements IdentityVerifier
 {
     public function verify(string $token): array
     {
+        $credentials = config('meeting.firebase_credentials');
+        abort_unless(
+            class_exists(Factory::class) && is_string($credentials) && is_readable($credentials) && config('meeting.firebase_project'),
+            503,
+            'Google sign-in is not configured on the server. Ask the administrator to configure Firebase Admin credentials.'
+        );
         $auth = (new Factory)->withServiceAccount(config('meeting.firebase_credentials'))->withProjectId(config('meeting.firebase_project'))->createAuth();
         try {
             $claims = $auth->verifyIdToken($token, true)->claims();
