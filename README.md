@@ -6,6 +6,16 @@ Laravel REST API for **Join Meeting — Connect anywhere. Meet everyone.** The p
 
 PHP 8.4+ with SQLite/PDO SQLite, mbstring, XML, curl, openssl, sodium, bcmath, zip, and Redis extensions; Composer 2; Node 22.19+ (24 recommended) for the paired frontend. Docker is optional for local Redis and LiveKit. Real Google sign-in needs a Firebase project with Google enabled. Local development can validate tokens through Google REST using the existing web API key, without an Admin key file. Real media needs a reachable LiveKit server and server credentials.
 
+## Start all local services
+
+Once the frontend checkout is beside this backend and the ignored app environments are configured, run this in a regular terminal with Docker access:
+
+```sh
+bash scripts/start-local.sh
+```
+
+It generates matching local Redis/LiveKit credentials in ignored, permission-restricted environment files, installs missing packages, migrates SQLite, starts Compose, and launches the API, frontend, scheduler and queue worker. It refuses to replace a custom LiveKit deployment or mismatched credentials. Set `JOIN_FRONTEND_DIR` if the frontend directory is elsewhere. Frontend and API use localhost ports 5173 and 8000; the API binds all local interfaces so Docker's signed webhook can reach it. Logs are under `storage/logs/local-*.log`. Ctrl+C stops only app processes launched by the script; use the printed Compose command to stop the containers. The helper does not verify a real video call.
+
 ## Local setup
 
 1. Clone this repository beside the frontend checkout.
