@@ -2,6 +2,8 @@
 
 Executed in the implementation workspace. These results distinguish application-boundary tests from real service and browser verification.
 
+## Initial implementation checks
+
 | Check | Result |
 |---|---|
 | Laravel migrations on SQLite in memory | Passed |
@@ -30,3 +32,14 @@ A complete backend Composer lock and frontend npm lock could not be generated wi
 Read the stale-token limitation in [architecture.md](architecture.md). A still-valid self-hosted LiveKit token may reconnect briefly after room deletion before a webhook removes it. This is not verified immediate revocation, and must be resolved for strict public-service requirements.
 
 Both source repositories were pushed successfully to the requested GitHub remotes on `main`. Credential scans passed before pushing. GitHub Actions workflows are included; their remote execution results were not inspected in this workspace.
+
+## Latest local Firebase correction
+
+The backend now supports explicitly enabled Google REST token lookup for local development without service-account credentials or the Admin package. Production still requires the Admin SDK with revocation checks, regardless of the local setting.
+
+- Full backend suite: **65 tests, 63 passed, 2 skipped, 219 assertions**.
+- New Firebase tests: **30 passed, 101 assertions**. They exercise the real auth endpoint and local verifier with Google's external HTTP response faked; no application-auth mock substitutes for the verifier.
+- Cases include exact token submission, account/session creation, profile synchronization, invalid/expired tokens, project/issuer/UID binding, timestamps, Google provider and verified email, malformed responses, Google rejection/outages, missing configuration, and production isolation.
+- Pint and Composer manifest validation passed. Public web keys remain in ignored local environment files.
+- Frontend build, lint, and its three validation tests were subsequently verified after local dependencies became available; an omitted icon import was corrected.
+- No real Google popup/login exchange or cross-network meeting is claimed as verified in this restricted shell. A normal browser/server with internet access is needed for that acceptance check.

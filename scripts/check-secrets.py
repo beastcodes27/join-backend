@@ -3,7 +3,7 @@
 import re, subprocess, sys
 from pathlib import PurePosixPath
 patterns = [rb'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',rb'gh[pousr]_[A-Za-z0-9]{30,}',rb'github_pat_[A-Za-z0-9_]{40,}',rb'AIza[0-9A-Za-z_-]{30,}',rb'"private_key"\s*:\s*"[^"\s]+']
-assignment = re.compile(rb'^(?:APP_KEY|LIVEKIT_API_KEY|LIVEKIT_API_SECRET|REDIS_PASSWORD|DB_PASSWORD|FIREBASE_CREDENTIALS|VITE_FIREBASE_API_KEY)[ \t]*=[ \t]*([^\r\n]*)$',re.M)
+assignment = re.compile(rb'^(?:APP_KEY|LIVEKIT_API_KEY|LIVEKIT_API_SECRET|REDIS_PASSWORD|DB_PASSWORD|FIREBASE_CREDENTIALS|FIREBASE_WEB_API_KEY|VITE_FIREBASE_API_KEY)[ \t]*=[ \t]*([^\r\n]*)$',re.M)
 failed = False
 for revision in subprocess.check_output(['git','rev-list','--all'],text=True).splitlines():
     for line in subprocess.check_output(['git','ls-tree','-r',revision],text=True).splitlines():

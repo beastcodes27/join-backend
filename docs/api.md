@@ -8,7 +8,7 @@ First GET `/sanctum/csrf-cookie`. Send credentials on all API requests, and send
 
 | Method | Endpoint | Who | Request / response |
 |---|---|---|---|
-| POST | `/auth/firebase` | Public + CSRF, 10/min/IP | `{id_token}` from Firebase Google sign-in → `{user}` and regenerated session |
+| POST | `/auth/firebase` | Public + CSRF, 10/min/IP | `{id_token}` from Firebase Google sign-in → `{user}` and regenerated session; Admin verification in production, opt-in Google REST verification locally |
 | GET | `/auth/me` | Active authenticated session | `{user}` |
 | POST | `/auth/logout` | Active authenticated session + CSRF | Invalidates session; 204 |
 | POST | `/meetings` | Active authenticated user + CSRF, 20/hour/user | `{title, max_participants?}` → 201 `{meeting}` including `share_url` |

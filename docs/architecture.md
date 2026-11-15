@@ -7,7 +7,7 @@ Two independent repositories share one API contract. `frontend/` is React, Vite,
 ## Trust boundaries
 
 1. Google authenticates the user in Firebase. The browser holds the Firebase ID token only in memory and exchanges it over HTTPS.
-2. Laravel verifies issuer, audience, signature, expiration, revocation, verified email, and Google provider with the Admin SDK. Only verified Firebase UID links an account. Google tokens are discarded after exchange.
+2. In production Laravel verifies issuer, audience, signature, expiration, revocation, verified email, and Google provider with the Admin SDK. An explicitly enabled local-only mode instead requires Google to accept the exact ID token through its HTTPS account lookup API, then checks the returned UID against its project-bound claims; it does not depend on an Admin key file. Production cannot select this path. Only verified Firebase UID links an account. Google tokens are discarded after exchange.
 3. Laravel regenerates an encrypted, HttpOnly session cookie, uses CSRF protection for mutations, and enforces active account status and an absolute two-hour authentication lifetime. Guests also receive a session-bound random identifier. Browser requests include cookies and the XSRF header.
 4. All non-hosts require host approval. Approval is scoped to a meeting and a server-derived identity. Host policies run on the server. Display names and client role fields have no authority.
 5. Joins take a serialized SQLite write transaction, check lifecycle, lock, admission, removal, capacity, and reserve a slot for token validity plus 15 seconds. LiveKit room capacity adds a second cap. Participant grants never include administration. Tokens expire after 60 seconds and are returned with `Cache-Control: no-store`.
@@ -45,3 +45,9 @@ Keep schema and services neutral for later billing/organization policies. Future
 - [LiveKit PHP SDK source](https://github.com/agence104/livekit-server-sdk-php)
 - [LiveKit webhooks](https://docs.livekit.io/intro/basics/rooms-participants-tracks/webhooks-events/)
 - [LiveKit deployment](https://docs.livekit.io/transport/self-hosting/deployment/)
+
+## Local Firebase verification
+
+Set `FIREBASE_LOCAL_TOKEN_LOOKUP=true` and `FIREBASE_WEB_API_KEY` only in the ignored local environment, with the matching `FIREBASE_PROJECT_ID`. The API key and tokens are never logged by the lookup service. Google lookup rejection never creates an application session; connection/configuration errors return actionable 503 responses. No unverified UID or email fallback exists. Do not treat the local lookup as proof of the production Admin SDK revocation behavior.
+
+[Google's account lookup API](https://firebase.google.com/docs/reference/rest/auth#section-get-account-info) documents the end-user ID token request. Local-path tests fake this external boundary and verify application security checks; live Google/browser verification remains separate.

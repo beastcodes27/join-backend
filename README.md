@@ -4,7 +4,7 @@ Laravel REST API for **Join Meeting — Connect anywhere. Meet everyone.** The p
 
 ## Prerequisites
 
-PHP 8.4+ with SQLite/PDO SQLite, mbstring, XML, curl, openssl, sodium, bcmath, zip, and Redis extensions; Composer 2; Node 22.19+ (24 recommended) for the paired frontend. Docker is optional for local Redis and LiveKit. Real Google sign-in needs a Firebase project with Google enabled. Real media needs a reachable LiveKit server and server credentials.
+PHP 8.4+ with SQLite/PDO SQLite, mbstring, XML, curl, openssl, sodium, bcmath, zip, and Redis extensions; Composer 2; Node 22.19+ (24 recommended) for the paired frontend. Docker is optional for local Redis and LiveKit. Real Google sign-in needs a Firebase project with Google enabled. Local development can validate tokens through Google REST using the existing web API key, without an Admin key file. Real media needs a reachable LiveKit server and server credentials.
 
 ## Local setup
 
@@ -21,7 +21,11 @@ The local LiveKit config advertises loopback and is only for same-machine checks
 
 ## Firebase setup
 
-Enable Google in Firebase Authentication, configure allowed browser domains, and use its web-app settings in the frontend's untracked `.env`. Store the Admin service-account JSON outside the checkout and outside any public root, with restrictive file permissions. Set `FIREBASE_CREDENTIALS` to its absolute path and `FIREBASE_PROJECT_ID` to the same project as the frontend. Enable the relevant APIs for checking revoked sessions. Never put Admin credentials or a service-account JSON into Vite variables.
+Enable Google in Firebase Authentication, configure allowed browser domains, and use its web-app settings in the frontend's untracked `.env`.
+
+For local development, set `FIREBASE_LOCAL_TOKEN_LOOKUP=true`, `FIREBASE_WEB_API_KEY` to your Firebase web API key, and `FIREBASE_PROJECT_ID` to the same project as the frontend. This mode sends the submitted ID token to Google's fixed HTTPS `accounts:lookup` endpoint before trusting any identity. The returned account must match the token subject, configured project/issuer, valid timestamps, Google provider, and verified email. Laravel creates a session only after those checks. The backend needs internet access and a key whose API/application restrictions permit the server request. No service-account file or Admin package is needed for this local-only path.
+
+Production always uses the Admin SDK and revocation checks, even if the local flag is accidentally left enabled. For production, store the Admin service-account JSON outside the checkout and outside any public root, with restrictive file permissions. Set `FIREBASE_CREDENTIALS` to its absolute path and `FIREBASE_PROJECT_ID` to the same project as the frontend. Enable the relevant APIs for checking revoked sessions. Never put Admin credentials or a service-account JSON into Vite variables.
 
 ## Environment variables
 
@@ -48,6 +52,8 @@ Enable Google in Firebase Authentication, configure allowed browser domains, and
 | `LOG_CHANNEL`, `LOG_LEVEL` | Operational log destination and verbosity; never log tokens or media |
 | `FIREBASE_CREDENTIALS` | Server-only absolute path to service-account JSON |
 | `FIREBASE_PROJECT_ID` | Verified Firebase project/audience |
+| `FIREBASE_LOCAL_TOKEN_LOOKUP` | Opt-in Google REST validation in `APP_ENV=local` only; default false; ignored in production |
+| `FIREBASE_WEB_API_KEY` | Existing Firebase web key used only by the local token lookup; keep the actual value in ignored `.env` |
 | `LIVEKIT_URL` | Browser-reachable WSS endpoint in production |
 | `LIVEKIT_HTTP_URL` | Server-reachable HTTPS or private HTTP room API |
 | `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | Server-only signing and room-management credentials |
