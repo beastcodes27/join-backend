@@ -43,3 +43,9 @@ The backend now supports explicitly enabled Google REST token lookup for local d
 - Pint and Composer manifest validation passed. Public web keys remain in ignored local environment files.
 - Frontend build, lint, and its three validation tests were subsequently verified after local dependencies became available; an omitted icon import was corrected.
 - No real Google popup/login exchange or cross-network meeting is claimed as verified in this restricted shell. A normal browser/server with internet access is needed for that acceptance check.
+
+## Local service startup follow-up
+
+The local Redis publish port is now configurable through `JOIN_REDIS_PORT` (default 6387), with the same value written to Laravel's ignored `REDIS_PORT`. The rendered Compose configuration was validated as loopback-only `127.0.0.1:6387` to container port 6379, with matching application credentials. Existing services on port 6379 are not managed by this launcher.
+
+After the SDK dependencies became available, the suite reports **65 tests: 64 passed, 1 skipped, 231 assertions**. Real LiveKit token permission/signature checks pass. The real webhook fixture was corrected to include a non-joining grant and to send its Authorization header through the raw HTTP test request. Its full protobuf body-integrity check remains skipped because this PHP runtime lacks BCMath. The startup script now explicitly requires BCMath before starting services. Container recreation and live media still require the user's regular terminal with Docker access.

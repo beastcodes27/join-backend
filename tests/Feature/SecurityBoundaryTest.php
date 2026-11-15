@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Agence104\LiveKit\AccessToken;
 use Agence104\LiveKit\AccessTokenOptions;
+use Agence104\LiveKit\VideoGrant;
 use App\Models\Meeting;
 use App\Models\User;
 use App\Services\LiveKitGateway;
@@ -56,10 +57,14 @@ class SecurityBoundaryTest extends TestCase
         if (! class_exists(AccessToken::class)) {
             $this->markTestSkipped('LiveKit SDK is not installed in this environment.');
         }
+        if (! extension_loaded('bcmath')) {
+            $this->markTestSkipped('PHP BCMath is required to decode LiveKit webhook protobuf messages.');
+        }
         config(['meeting.livekit_key' => bin2hex(random_bytes(12)), 'meeting.livekit_secret' => bin2hex(random_bytes(32))]);
         $body = json_encode(['id' => bin2hex(random_bytes(12)), 'event' => 'room_started', 'createdAt' => (string) time(), 'room' => ['name' => (string) Str::uuid()]]);
-        $token = (new AccessToken(config('meeting.livekit_key'), config('meeting.livekit_secret'), (new AccessTokenOptions)->setTtl(60)))->setSha256(base64_encode(hash('sha256', $body, true)))->toJwt();
-        $this->withHeader('Authorization', $token)->call('POST', '/api/v1/livekit/webhook', [], [], [], ['CONTENT_TYPE' => 'application/webhook+json'], $body)->assertNoContent();
-        $this->withHeader('Authorization', $token)->call('POST','/api/v1/livekit/webhook',[],[],[],['CONTENT_TYPE' => 'application/webhook+json'],$body.' ')->assertUnauthorized();
+        $token = (new AccessToken(config('meeting.livekit_key'), config('meeting.livekit_secret'), (new AccessTokenOptions)->setTtl(60)))->setGrant(new VideoGrant(['roomJoin' => false]))->setSha256(base64_encode(hash('sha256', $body, true)))->toJwt();
+        $this->assertSame('room_started', app(LiveKitGateway::class)->webhook($body, $token)['event']);
+        $this->call('POST', '/api/v1/livekit/webhook', [], [], [], ['CONTENT_TYPE' => 'application/webhook+json', 'HTTP_AUTHORIZATION' => $token], $body)->assertNoContent();
+        $this->call('POST', '/api/v1/livekit/webhook', [], [], [], ['CONTENT_TYPE' => 'application/webhook+json', 'HTTP_AUTHORIZATION' => $token], $body.' ')->assertUnauthorized();
     }
 }

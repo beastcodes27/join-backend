@@ -32,6 +32,9 @@ app = values(app_env)
 if app.get('APP_ENV') != 'local':
     raise SystemExit('This helper is only for APP_ENV=local; it will not change production credentials.')
 services = values(service_env)
+redis_port = services.get('JOIN_REDIS_PORT', '6387')
+if not redis_port.isdecimal() or not 1024 <= int(redis_port) <= 65535:
+    raise SystemExit('JOIN_REDIS_PORT must be an integer between 1024 and 65535.')
 shared = {}
 for key in ['LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'REDIS_PASSWORD']:
     app_value = app.get(key)
@@ -43,6 +46,7 @@ for key in ['LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'REDIS_PASSWORD']:
 for key, expected in [('LIVEKIT_URL', 'ws://localhost:7880'), ('LIVEKIT_HTTP_URL', 'http://localhost:7880')]:
     if app.get(key) and app[key] != expected:
         raise SystemExit('A custom ' + key + ' is configured. This helper will not replace an existing media deployment.')
-update(service_env, shared)
-update(app_env, {**shared, 'LIVEKIT_URL': 'ws://localhost:7880', 'LIVEKIT_HTTP_URL': 'http://localhost:7880'})
+update(service_env, {**shared, 'JOIN_REDIS_PORT': redis_port})
+update(app_env, {**shared, 'REDIS_HOST': '127.0.0.1', 'REDIS_PORT': redis_port, 'LIVEKIT_URL': 'ws://localhost:7880', 'LIVEKIT_HTTP_URL': 'http://localhost:7880'})
 print('Local Redis/LiveKit credentials are synchronized in ignored environment files; values were not displayed.')
+print('Project Redis host port: 127.0.0.1:' + redis_port + ' (container port 6379).')

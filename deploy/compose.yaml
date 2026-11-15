@@ -6,7 +6,7 @@ services:
     command: ["sh", "-ec", 'exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes']
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in deploy/.env}
-    ports: ["127.0.0.1:6379:6379"]
+    ports: ["127.0.0.1:${JOIN_REDIS_PORT:-6387}:6379"]
     volumes: ["redis-data:/data"]
   livekit:
     image: livekit/livekit-server:v1.9.0

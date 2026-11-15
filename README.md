@@ -16,6 +16,10 @@ bash scripts/start-local.sh
 
 It generates matching local Redis/LiveKit credentials in ignored, permission-restricted environment files, installs missing packages, migrates SQLite, starts Compose, and launches the API, frontend, scheduler and queue worker. It refuses to replace a custom LiveKit deployment or mismatched credentials. Set `JOIN_FRONTEND_DIR` if the frontend directory is elsewhere. Frontend and API use localhost ports 5173 and 8000; the API binds all local interfaces so Docker's signed webhook can reach it. Logs are under `storage/logs/local-*.log`. Ctrl+C stops only app processes launched by the script; use the printed Compose command to stop the containers. The helper does not verify a real video call.
 
+Project Redis uses host port `6387` to avoid occupying another application's default Redis port. Set `JOIN_REDIS_PORT` in the ignored `deploy/.env` to choose another port; the helper synchronizes Laravel's `REDIS_PORT`. Redis keeps its internal container port `6379`. After a port-allocation error, rerun the startup script to recreate this project's Redis container with the corrected mapping.
+
+The launcher checks for PHP BCMath, which LiveKit's protobuf messages require. If missing on Ubuntu with PHP 8.4, install `php8.4-bcmath` and enable it for the CLI and any PHP-FPM runtime before restarting the launcher.
+
 ## Local setup
 
 1. Clone this repository beside the frontend checkout.

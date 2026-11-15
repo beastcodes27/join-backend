@@ -20,6 +20,10 @@ done
 [[ -f "$frontend_dir/package.json" ]] || { echo 'Frontend checkout not found. Set JOIN_FRONTEND_DIR to its directory.' >&2; exit 1; }
 cd -- "$backend_dir"
 python3 scripts/prepare-local-env.py
+if ! php -r 'exit(extension_loaded("bcmath") ? 0 : 1);'; then
+    echo "PHP BCMath is required by LiveKit. Install/enable the BCMath extension for your PHP version (for PHP 8.4 on Ubuntu: sudo apt install php8.4-bcmath), then rerun this script." >&2
+    exit 1
+fi
 if ! docker info >/dev/null 2>&1; then
     echo 'Docker is unavailable. Run this script in a regular terminal with Docker access; the restricted agent session cannot start these services.' >&2
     exit 1
