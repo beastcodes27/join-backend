@@ -1,4 +1,5 @@
 <?php
+
 return [
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
     'max_participants' => (int) env('MEETING_MAX_PARTICIPANTS', 12),
@@ -10,4 +11,6 @@ return [
     'livekit_secret' => env('LIVEKIT_API_SECRET'),
     'firebase_credentials' => env('FIREBASE_CREDENTIALS'),
     'firebase_project' => env('FIREBASE_PROJECT_ID'),
+    'firebase_web_api_key' => env('FIREBASE_WEB_API_KEY'),
+    'firebase_local_token_lookup' => env('FIREBASE_LOCAL_TOKEN_LOOKUP', false),
 ];

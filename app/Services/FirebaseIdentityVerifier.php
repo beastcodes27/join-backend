@@ -9,8 +9,14 @@ use Kreait\Firebase\Factory;
 
 class FirebaseIdentityVerifier implements IdentityVerifier
 {
+    public function __construct(private FirebaseTokenLookup $tokenLookup) {}
+
     public function verify(string $token): array
     {
+        if (app()->environment('local') && config('meeting.firebase_local_token_lookup')) {
+            return $this->tokenLookup->verify($token);
+        }
+
         $credentials = config('meeting.firebase_credentials');
         abort_unless(
             class_exists(Factory::class) && is_string($credentials) && is_readable($credentials) && config('meeting.firebase_project'),
