@@ -25,7 +25,9 @@ class ReconcileMeetings extends Command
         $failed = false;
         Meeting::where('status', 'ended')->where('ended_at', '>=', now()->subDay())->eachById(function (Meeting $meeting) use ($livekit, &$failed) {
             try {
-                $livekit->deleteRoom($meeting->uuid);
+                if (! ($meeting->scheduled_at && ! $meeting->livekit_sid)) {
+                    $livekit->deleteRoom($meeting->uuid);
+                }
                 $meeting->participants()->whereNull('left_at')->update(['left_at' => now(), 'lease_until' => null]);
             } catch (\Throwable $e) {
                 report($e);

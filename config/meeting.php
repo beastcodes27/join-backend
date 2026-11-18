@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'email_preview' => env('MEETING_EMAIL_PREVIEW', false),
+    'email_reminders' => env('MEETING_EMAIL_REMINDERS', true),
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
     'max_participants' => (int) env('MEETING_MAX_PARTICIPANTS', 12),
     'max_minutes' => (int) env('MEETING_MAX_MINUTES', 60),

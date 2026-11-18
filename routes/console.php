@@ -9,3 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('meetings:reconcile')->everyMinute()->withoutOverlapping();
+
+Schedule::command('meetings:remind')->everyMinute()->withoutOverlapping();

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateMeetingRequest;
+use App\Jobs\SendMeetingReminder;
 use App\Models\Meeting;
 use App\Services\LiveKitGateway;
 use App\Services\MeetingAccess;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,8 +27,23 @@ class MeetingController extends Controller
 
     public function store(CreateMeetingRequest $request): JsonResponse
     {
-        $meeting = Meeting::create(['uuid' => (string) Str::uuid(), 'host_id' => $request->user()->id, 'meeting_code' => bin2hex(random_bytes(16)), 'title' => $request->validated('title'), 'max_participants' => $request->validated('max_participants', config('meeting.max_participants')), 'expires_at' => now()->addMinutes(config('meeting.max_minutes'))]);
-        $meeting->events()->create(['event_type' => 'meeting.created', 'payload' => ['actor' => $request->user()->id]]);
+        $meeting = DB::transaction(function () use ($request) {
+            $scheduled = $request->validated('scheduled_at') ? Carbon::parse($request->validated('scheduled_at'))->utc() : null;
+            $duration = $request->validated('duration_minutes', config('meeting.max_minutes'));
+            $meeting = Meeting::create(['uuid' => (string) Str::uuid(), 'host_id' => $request->user()->id, 'meeting_code' => bin2hex(random_bytes(16)),
+                'title' => $request->validated('title'), 'max_participants' => $request->validated('max_participants', config('meeting.max_participants')),
+                'status' => $scheduled ? 'scheduled' : 'created', 'scheduled_at' => $scheduled, 'timezone' => $request->validated('timezone', 'UTC'),
+                'duration_minutes' => $duration, 'expires_at' => ($scheduled ? $scheduled->copy() : now())->addMinutes($duration)]);
+            if ($scheduled) {
+                $booking = $meeting->bookings()->create(['user_id' => $request->user()->id, 'timezone' => $meeting->timezone, 'reminder_due_at' => $scheduled->copy()->subHour()]);
+                if ($booking->reminder_due_at->isPast()) {
+                    SendMeetingReminder::dispatch($booking->id)->afterCommit();
+                }
+            }
+            $meeting->events()->create(['event_type' => $scheduled ? 'meeting.scheduled' : 'meeting.created', 'payload' => ['actor' => $request->user()->id]]);
+
+            return $meeting;
+        });
 
         return response()->json(['meeting' => $this->access->metadata($request, $meeting)], 201);
     }
@@ -68,6 +85,13 @@ class MeetingController extends Controller
             $reserved = $meeting->participants()->where('identity', '!=', $identity)->whereNull('removed_at')->where(function ($q) {
                 $q->where(fn ($q) => $q->whereNotNull('joined_at')->whereNull('left_at'))->orWhere('lease_until', '>', now());
             })->count();
+            if ($meeting->scheduled_at && ! $isHost && ! $meeting->bookings()->where('user_id', $request->user()?->id)->whereNull('cancelled_at')->exists()) {
+                $occupiedUsers = $meeting->participants()->whereNull('removed_at')->where(function ($q) {
+                    $q->where(fn ($q) => $q->whereNotNull('joined_at')->whereNull('left_at'))->orWhere('lease_until', '>', now());
+                })->whereNotNull('user_id')->pluck('user_id');
+                $unclaimed = $meeting->bookings()->whereNull('cancelled_at')->whereNotIn('user_id', $occupiedUsers)->count();
+                abort_if($reserved + $unclaimed >= $meeting->max_participants, 409, 'The remaining places are reserved for booked participants.');
+            }
             abort_if($reserved >= $meeting->max_participants, 409, 'This meeting is full. Try again when someone leaves.');
             try {
                 $roomSid = $this->livekit->ensureRoom($meeting);
@@ -149,13 +173,18 @@ class MeetingController extends Controller
     {
         Gate::authorize('manage', $meeting);
         // Persist the tombstone first. A video-service outage must never reopen joins.
-        DB::transaction(function () use ($meeting, $request) {
+        $scheduledOnly = DB::transaction(function () use ($meeting, $request) {
             $meeting = Meeting::whereKey($meeting->id)->lockForUpdate()->firstOrFail();
+            $neverOpened = $meeting->status === 'scheduled' && ! $meeting->livekit_sid;
             $meeting->update(['status' => 'ended', 'ended_at' => $meeting->ended_at ?? now()]);
             $meeting->events()->create(['event_type' => 'meeting.ended', 'payload' => ['actor' => $request->user()->id]]);
+
+            return $neverOpened;
         });
         try {
-            $this->livekit->deleteRoom($meeting->uuid);
+            if (! $scheduledOnly) {
+                $this->livekit->deleteRoom($meeting->uuid);
+            }
         } catch (\Throwable $e) {
             report($e);
 

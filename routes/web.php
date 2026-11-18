@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BookingController;
 use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Middleware\ActiveAccount;
 use Illuminate\Support\Facades\Route;
 
@@ -27,4 +29,12 @@ Route::prefix('api/v1/meetings')->middleware([ActiveAccount::class, 'throttle:ap
             Route::post('{meeting}/'.$action, [MeetingController::class, $action]);
         }
     });
+});
+
+Route::prefix('api/v1')->middleware(['auth:sanctum', ActiveAccount::class, 'throttle:api'])->group(function () {
+    Route::get('bookings', [BookingController::class, 'index']);
+    Route::post('meetings/{meeting}/book', [BookingController::class, 'store']);
+    Route::post('meetings/{meeting}/unbook', [BookingController::class, 'cancel']);
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'read']);
 });
