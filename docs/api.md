@@ -36,3 +36,19 @@ Host: Google ID token exchange → create meeting → join without waiting → s
 Guest: read metadata → request admission with a name → poll the same endpoint for own status → explicitly join after approval → connect LiveKit using returned token. Tokens are held in React memory only. Leaving uses only the session-derived identity.
 
 `created` becomes `active` only after a trusted participant-joined event, and `ended` after host end, room-finished, or expiry reconciliation. The `meetings:reconcile` scheduler must run every minute. Maximum duration starts at creation.
+
+## Scheduled meetings and bookings
+
+`POST /meetings` additionally accepts `scheduled_at` (future ISO-8601 instant with explicit UTC/offset, within one year), `timezone` (IANA name), and `duration_minutes` (15 through configured maximum). It creates a `scheduled` meeting and books the authenticated host. Existing instant meeting requests are unchanged. Responses also include `scheduled_at`, `timezone`, `duration_minutes`, `booking_count`, `is_booked`, `can_join`, and `email_reminder_mode` (`preview`, `delivery`, or `unavailable`). Public metadata reveals counts, not other attendees' identities/emails. `can_join` is computed using server time so waiting browsers open the prejoin at the scheduled time. Early joins/admission requests return 425.
+
+All routes below require an active authenticated session. Mutations require CSRF:
+
+| Method | Endpoint | Behavior |
+|---|---|---|
+| GET | `/bookings` | Caller’s active scheduled/booked meetings only |
+| POST | `/meetings/{code}/book` | Idempotent booking for the caller; optional `timezone`; enforces capacity including host |
+| POST | `/meetings/{code}/unbook` | Cancels caller’s booking; automatic host booking requires cancelling the meeting instead |
+| GET | `/notifications` | Caller’s latest 30 reminders, unread count, and email mode |
+| POST | `/notifications/{uuid}/read` | Mark only caller’s notification read; another user’s ID returns 404 |
+
+The existing host-only `/meetings/{code}/end` cancels a future meeting, blocking joins/bookings and pending reminders. Booking requests cannot choose a recipient email or user ID. Reserved places cannot be consumed by unbooked participants. All non-hosts still need admission to receive media tokens.

@@ -93,3 +93,25 @@ See [architecture](docs/architecture.md), [API contract](docs/api.md), and [VPS 
 After changing the Compose media network, stop the launcher with Ctrl+C and rerun `bash scripts/start-local.sh` so Compose recreates LiveKit. The local configuration is for Linux and same-computer testing; another device needs a reachable HTTPS/WSS deployment and suitable media routing/TURN. The browser now shows explicit disconnect reasons and a retry action for recoverable failures. Duplicate tabs sharing the same signed-in identity still replace one another; use a separate browser profile/private window as a guest for a two-participant check.
 
 The optional frontend `npm run test:call` exercises two real browser contexts, host admission, bidirectional chat, unread messages, retained drafts, and connection continuity through repeated metadata polls. It requires a signed-in test-host storage state and running services. Backend reconnect tests cover expired initial leases and reject removed, revoked, or long-departed identities.
+
+## Scheduling, bookings, and one-hour reminders
+
+Create a scheduled meeting from the dashboard with a local date/time and duration. The API stores its start in UTC plus the host's IANA timezone, and computes expiry from the scheduled start rather than creation. The host is booked automatically. Share the existing `/m/:code` invitation so Google-authenticated invitees can book a place; a booking reserves capacity but does not bypass host admission. Guests can still join after the scheduled start if unreserved space is available and the host admits them. Cancellation stops pending reminders. The room opens at its start time; early media tokens are rejected.
+
+`meetings:remind` runs every minute and queues a unique job per due booking, one hour before the scheduled start. A booking inside that hour queues its reminder immediately. The job creates a durable, owner-scoped in-app notification and sends email to the verified account email. Read state is private to its recipient. The dashboard and in-call notification bell refresh periodically. Keep the scheduler and queue worker running; production systemd examples are in `deploy/`.
+
+The local launcher adds Mailpit: SMTP on **127.0.0.1:1027**, and the email preview inbox at **http://localhost:8027**. `JOIN_SMTP_PORT` and `JOIN_MAIL_UI_PORT` in ignored `deploy/.env` customize those bindings. This development mailbox captures emails; it **does not deliver them to external inboxes**. The app labels local preview mode accordingly. Existing custom SMTP providers are preserved by the local helper.
+
+For real email delivery, configure the backend's ignored environment:
+
+| Variable | Meaning |
+|---|---|
+| `MEETING_EMAIL_REMINDERS` | Enable email reminders; default true. In-app reminders always remain available |
+| `MEETING_EMAIL_PREVIEW` | True only for the local Mailpit capture configuration; production uses delivery mode |
+| `MAIL_MAILER` | `smtp` for SMTP delivery; `log`/`array` do not count as email delivery |
+| `MAIL_HOST`, `MAIL_PORT` | Your provider's SMTP host/port |
+| `MAIL_SCHEME` | SMTP scheme supported by the provider, such as `smtp` with STARTTLS or `smtps` |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | Server-only SMTP credentials; never commit them |
+| `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Provider-authorized sender address and display name |
+
+Apply config changes with `php artisan config:clear` locally, and restart existing queue workers/launcher so they load the new settings. In production rebuild cached config and use `queue:restart` with supervised workers. Monitor failed jobs and SMTP transport errors. In-app reminder creation is idempotent. SMTP is outside SQLite write transactions and is retryable; a process crash after SMTP acceptance but before saving its status can result in a duplicate email. Email acceptance is not a read/delivery receipt. Scheduler tick, queue latency and provider delivery time affect the exact arrival time. Cancelled, ended, inactive-user, and already-started meetings are checked again before dispatch/delivery.

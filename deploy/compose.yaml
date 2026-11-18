@@ -8,6 +8,14 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in deploy/.env}
     ports: ["127.0.0.1:${JOIN_REDIS_PORT:-6387}:6379"]
     volumes: ["redis-data:/data"]
+  mailpit:
+    image: axllent/mailpit:v1.27.4
+    restart: unless-stopped
+    ports: ["127.0.0.1:${JOIN_SMTP_PORT:-1027}:1025", "127.0.0.1:${JOIN_MAIL_UI_PORT:-8027}:8025"]
+    environment:
+      MP_MAX_MESSAGES: 1000
+      MP_DATABASE: /data/mailpit.db
+    volumes: ["mail-data:/data"]
   livekit:
     # Linux local development: let ICE use host loopback without Docker bridge NAT.
     network_mode: host
@@ -30,3 +38,4 @@ services:
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET:?Set LIVEKIT_API_SECRET}"
 volumes:
   redis-data:
+  mail-data:

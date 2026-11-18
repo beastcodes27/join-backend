@@ -55,3 +55,13 @@ After the SDK dependencies became available, the suite reports **65 tests: 64 pa
 BCMath was installed successfully, but the user-selected PHP wrapper forced a custom INI scan directory that omitted its configuration and loaded mysqli before mysqlnd. The local launcher now generates an ignored, project-scoped PHP wrapper and module configuration, preserving the custom SQLite extension paths while loading installed BCMath and ordering MySQL dependencies correctly. System and user-wide PHP files are unchanged.
 
 With that project runtime: **65 backend tests passed, 235 assertions, no skips**. BCMath, mysqli, mysqlnd, PDO and pdo_sqlite load without startup warnings. Real LiveKit token grants and signed/tampered webhook checks now run successfully. This verifies SDK integration boundaries; live browser media and Docker startup remain separate checks requiring an unrestricted terminal.
+
+## Chat, local connection recovery, scheduling and reminders
+
+- Local Compose rendering validates Linux host networking, enabled loopback candidates and loopback webhook routing for the SFU. The user's local LiveKit image selection was preserved.
+- The client uses a stable room instance and serialized SDK connection work. Metadata refresh errors no longer unmount a connected call. Disconnect reasons offer appropriate recovery without host-removal/ended-room bypasses.
+- Backend tests cover resuming an authorized connection after the initial token lease, while rejecting expired never-joined reservations, removed/revoked/long-departed participants, and stale departure races.
+- Scheduling tests cover UTC/timezone handling, future validation, host automatic booking, duplicate booking, capacity and reserved seats, cancellation, early joining, one-hour/late reminder dispatch, recipient privacy, mail failures/retries, no duplicate in-app reminders, and user-scoped notification reads.
+- Full backend suite: **93 passed, 360 assertions**.
+- Frontend Node suites: **25 passed** across meeting-code, chat, connection recovery and scheduling helpers. Production build and lint pass.
+- Real two-browser call/chat and scheduling acceptance specs are included but require actual services and local authenticated test-host state. Full browser media and actual email transport delivery have not been verified in the restricted agent runtime. Unit reminder tests fake notification delivery; Compose validates configuration without starting Docker.

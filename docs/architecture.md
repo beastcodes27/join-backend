@@ -51,3 +51,9 @@ Keep schema and services neutral for later billing/organization policies. Future
 Set `FIREBASE_LOCAL_TOKEN_LOOKUP=true` and `FIREBASE_WEB_API_KEY` only in the ignored local environment, with the matching `FIREBASE_PROJECT_ID`. The API key and tokens are never logged by the lookup service. Google lookup rejection never creates an application session; connection/configuration errors return actionable 503 responses. No unverified UID or email fallback exists. Do not treat the local lookup as proof of the production Admin SDK revocation behavior.
 
 [Google's account lookup API](https://firebase.google.com/docs/reference/rest/auth#section-get-account-info) documents the end-user ID token request. Local-path tests fake this external boundary and verify application security checks; live Google/browser verification remains separate.
+
+## Added scheduling milestone
+
+Scheduling is now in scope at the owner's request. `meeting_bookings` uses a unique meeting/user key, a stable reminder notification UUID, recipient timezone, due time, cancellation state and separate in-app/email timestamps. Scheduled meeting expiry is relative to its scheduled start. Booking reserves a place but confers no host/admission privileges. Authenticated Google users book only themselves, using their verified account email for reminders.
+
+A minute scheduler dispatches a unique queued reminder job for each due booking. Database notification creation and its status update are transactional and idempotent. SMTP runs outside the SQLite writer lock, retries failures, and checks booking/meeting/user state before delivery. Jobs never accept a client-supplied recipient. Notification reads are owner-scoped. Development uses a loopback-only Mailpit capture inbox; production needs an actual configured mail provider. Scheduling and reminders are implemented; the other listed future features remain excluded.
