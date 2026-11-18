@@ -285,4 +285,67 @@ class MeetingApiTest extends TestCase
         $this->app->instance(LiveKitGateway::class, Mockery::mock(LiveKitGateway::class)->shouldReceive('webhook')->andThrow(new \RuntimeException('Invalid signature'))->getMock());
         $this->postJson('/api/v1/livekit/webhook', [])->assertUnauthorized();
     }
+
+    public function test_authorized_participant_can_resume_after_initial_token_lease_expires(): void
+    {
+        foreach (['host', 'participant'] as $role) {
+            $m = $this->meeting();
+            $identity = $role === 'host' ? 'user:'.$this->host->id : 'guest:'.Str::uuid();
+            $participant = $m->participants()->create(['identity' => $identity, 'user_id' => $role === 'host' ? $this->host->id : null, 'role' => $role, 'display_name' => 'Returning participant', 'joined_at' => now()->subMinutes(5), 'lease_until' => now()->subMinutes(4)]);
+            if ($role !== 'host') {
+                $m->admissions()->create(['participant_identifier' => $identity, 'display_name' => 'Guest', 'status' => 'approved']);
+            }
+            $event = ['id' => bin2hex(random_bytes(16)), 'event' => 'participant_joined', 'createdAt' => time(), 'room' => ['name' => $m->uuid], 'participant' => ['identity' => $identity, 'sid' => 'resumed-connection']];
+            $gateway = Mockery::mock(LiveKitGateway::class);
+            $gateway->shouldReceive('webhook')->andReturn($event);
+            $gateway->shouldNotReceive('remove');
+            $this->app->instance(LiveKitGateway::class, $gateway);
+            $this->postJson('/api/v1/livekit/webhook', [])->assertNoContent();
+            $this->assertSame('resumed-connection', $participant->fresh()->connection_sid);
+        }
+    }
+
+    public function test_expired_lease_without_prior_media_join_cannot_resume(): void
+    {
+        $m = $this->meeting();
+        $identity = 'guest:'.Str::uuid();
+        $m->participants()->create(['identity' => $identity, 'display_name' => 'Guest', 'lease_until' => now()->subMinute()]);
+        $m->admissions()->create(['participant_identifier' => $identity, 'display_name' => 'Guest', 'status' => 'approved']);
+        $event = ['id' => bin2hex(random_bytes(16)), 'event' => 'participant_joined', 'createdAt' => time(), 'room' => ['name' => $m->uuid], 'participant' => ['identity' => $identity, 'sid' => 'unauthorized-resume']];
+        $gateway = Mockery::mock(LiveKitGateway::class);
+        $gateway->shouldReceive('webhook')->andReturn($event);
+        $gateway->shouldReceive('remove')->once()->with($m->uuid, $identity);
+        $this->app->instance(LiveKitGateway::class, $gateway);
+        $this->postJson('/api/v1/livekit/webhook', [])->assertNoContent();
+        $this->assertNull($m->participants()->first()->joined_at);
+    }
+
+    public function test_old_departure_keeps_a_fresh_join_reservation(): void
+    {
+        $m = $this->meeting();
+        $identity = 'user:'.$this->host->id;
+        $participant = $m->participants()->create(['identity' => $identity, 'display_name' => 'Host', 'joined_at' => now()->subMinute(), 'connection_sid' => 'old-connection', 'lease_until' => now()->addMinute()]);
+        $event = ['id' => bin2hex(random_bytes(16)), 'event' => 'participant_left', 'createdAt' => time(), 'room' => ['name' => $m->uuid], 'participant' => ['identity' => $identity, 'sid' => 'old-connection']];
+        $this->app->instance(LiveKitGateway::class, Mockery::mock(LiveKitGateway::class)->shouldReceive('webhook')->andReturn($event)->getMock());
+        $this->postJson('/api/v1/livekit/webhook', [])->assertNoContent();
+        $this->assertTrue($participant->fresh()->lease_until->isFuture());
+        $this->assertNotNull($participant->fresh()->left_at);
+    }
+
+    public function test_removed_revoked_or_long_departed_participants_cannot_use_resume_grace(): void
+    {
+        foreach (['removed', 'revoked', 'departed'] as $case) {
+            $m = $this->meeting();
+            $identity = 'guest:'.Str::uuid();
+            $participant = $m->participants()->create(['identity' => $identity, 'display_name' => 'Guest', 'joined_at' => now()->subMinutes(5), 'lease_until' => now()->subMinutes(4), 'removed_at' => $case === 'removed' ? now() : null, 'left_at' => $case === 'departed' ? now()->subMinutes(3) : null]);
+            $m->admissions()->create(['participant_identifier' => $identity, 'display_name' => 'Guest', 'status' => $case === 'revoked' ? 'rejected' : 'approved']);
+            $event = ['id' => bin2hex(random_bytes(16)), 'event' => 'participant_joined', 'createdAt' => time(), 'room' => ['name' => $m->uuid], 'participant' => ['identity' => $identity, 'sid' => 'disallowed-resume']];
+            $gateway = Mockery::mock(LiveKitGateway::class);
+            $gateway->shouldReceive('webhook')->andReturn($event);
+            $gateway->shouldReceive('remove')->once()->with($m->uuid, $identity);
+            $this->app->instance(LiveKitGateway::class, $gateway);
+            $this->postJson('/api/v1/livekit/webhook', [])->assertNoContent();
+            $this->assertNull($participant->fresh()->connection_sid);
+        }
+    }
 }

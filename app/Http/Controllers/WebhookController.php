@@ -34,14 +34,18 @@ class WebhookController extends Controller
             } elseif (isset($event['room']['sid']) && $meeting->livekit_sid && $event['room']['sid'] !== $meeting->livekit_sid) {
                 // Delayed events from an older incarnation must not mutate the current room.
             } elseif ($event['event'] === 'participant_joined') {
-                if (! $participant || $participant->removed_at || $participant->lease_until?->isPast()) {
+                $leaseValid = $participant?->lease_until?->isFuture() ?? false;
+                $continuing = $participant?->joined_at && (! $participant->left_at || $participant->left_at->greaterThanOrEqualTo(now()->subMinutes(2)));
+                $approved = $participant && (($participant->role === 'host' && $participant->user_id === $meeting->host_id)
+                    || $meeting->admissions()->where('participant_identifier', $identity)->where('status', 'approved')->exists());
+                if (! $participant || $participant->removed_at || (! $leaseValid && ! ($continuing && $approved))) {
                     $livekit->remove($meeting->uuid, $identity);
                 } else {
                     $participant->update(['joined_at' => now(), 'left_at' => null, 'connection_sid' => $event['participant']['sid'] ?? null]);
                     $meeting->update(['status' => 'active', 'started_at' => $meeting->started_at ?? now()]);
                 }
             } elseif ($event['event'] === 'participant_left' && $participant && $participant->connection_sid === ($event['participant']['sid'] ?? null)) {
-                $participant->update(['left_at' => now(), 'lease_until' => null]);
+                $participant->update(['left_at' => now()]);
             } elseif ($event['event'] === 'room_finished') {
                 // Ignore a delayed finish from an old room incarnation when newer participants are connected.
                 $hasNewer = $meeting->participants()->whereNull('left_at')->where('joined_at', '>', date('Y-m-d H:i:s', (int) $event['createdAt']))->exists();

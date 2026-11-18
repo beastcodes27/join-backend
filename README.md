@@ -31,7 +31,7 @@ The launcher creates a project-scoped PHP configuration under ignored `storage/a
 7. Start Laravel with `php artisan serve --host=0.0.0.0 --port=8000`. Binding to all interfaces is required for the local Docker webhook to reach the host; use a trusted local network. Start the frontend on localhost:5173 with its Vite proxy.
 8. Run `php artisan schedule:work` in another terminal. If using queued jobs, run `php artisan queue:work` too. Sessions/cache can stay file-backed in local development.
 
-The local LiveKit config advertises loopback and is only for same-machine checks. For different devices and networks, use HTTPS/WSS and a public LiveKit/TURN deployment, or LiveKit Cloud. Do not deploy the local YAML publicly. Room events must reach `/api/v1/livekit/webhook`; lifecycle and stale-join removal rely on these trusted events.
+The local LiveKit config uses Linux host networking and enabled loopback ICE candidates for same-machine browsers, avoiding Docker bridge NAT for media. For different devices and networks, use HTTPS/WSS and a public LiveKit/TURN deployment, or LiveKit Cloud. Do not deploy the local YAML publicly. Room events must reach `/api/v1/livekit/webhook`; lifecycle and stale-join removal rely on these trusted events.
 
 ## Firebase setup
 
@@ -87,3 +87,9 @@ All credential fields in tracked examples are empty. `deploy/.env` uses the Redi
 See [test-results.md](docs/test-results.md) for actual results and blocked checks. Firebase and LiveKit integration packages were unavailable in the restricted build environment. The cached framework was used to test application boundaries with mocks; this does not verify live sign-in or media. The complete Composer manifest declares both SDKs. A complete dependency lock could not be generated; resolve, audit, and commit it before deployment.
 
 See [architecture](docs/architecture.md), [API contract](docs/api.md), and [VPS deployment](docs/deployment.md). Review the documented stale-token revocation window before any public launch.
+
+## Local connection troubleshooting
+
+After changing the Compose media network, stop the launcher with Ctrl+C and rerun `bash scripts/start-local.sh` so Compose recreates LiveKit. The local configuration is for Linux and same-computer testing; another device needs a reachable HTTPS/WSS deployment and suitable media routing/TURN. The browser now shows explicit disconnect reasons and a retry action for recoverable failures. Duplicate tabs sharing the same signed-in identity still replace one another; use a separate browser profile/private window as a guest for a two-participant check.
+
+The optional frontend `npm run test:call` exercises two real browser contexts, host admission, bidirectional chat, unread messages, retained drafts, and connection continuity through repeated metadata polls. It requires a signed-in test-host storage state and running services. Backend reconnect tests cover expired initial leases and reject removed, revoked, or long-departed identities.

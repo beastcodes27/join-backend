@@ -9,6 +9,8 @@ services:
     ports: ["127.0.0.1:${JOIN_REDIS_PORT:-6387}:6379"]
     volumes: ["redis-data:/data"]
   livekit:
+    # Linux local development: let ICE use host loopback without Docker bridge NAT.
+    network_mode: host
     image: livekit/livekit-server:v1.9.0
     restart: unless-stopped
     environment:
@@ -20,12 +22,11 @@ services:
           udp_port: 7882
           use_external_ip: false
           node_ip: 127.0.0.1
+          enable_loopback_candidate: true
         webhook:
           api_key: ${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY}
           urls:
-            - http://host.docker.internal:8000/api/v1/livekit/webhook
+            - http://127.0.0.1:8000/api/v1/livekit/webhook
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET:?Set LIVEKIT_API_SECRET}"
-    ports: ["7880:7880", "7881:7881", "7882:7882/udp"]
-    extra_hosts: ["host.docker.internal:host-gateway"]
 volumes:
   redis-data:
