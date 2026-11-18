@@ -29,7 +29,7 @@ services:
           tcp_port: 7881
           udp_port: 7882
           use_external_ip: false
-          node_ip: 127.0.0.1
+          # Discover host interfaces as well as loopback; do not map every ICE candidate to localhost.
           enable_loopback_candidate: true
         webhook:
           api_key: ${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY}

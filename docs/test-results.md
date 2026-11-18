@@ -65,3 +65,9 @@ With that project runtime: **65 backend tests passed, 235 assertions, no skips**
 - Full backend suite: **93 passed, 360 assertions**.
 - Frontend Node suites: **25 passed** across meeting-code, chat, connection recovery and scheduling helpers. Production build and lint pass.
 - Real two-browser call/chat and scheduling acceptance specs are included but require actual services and local authenticated test-host state. Full browser media and actual email transport delivery have not been verified in the restricted agent runtime. Unit reminder tests fake notification delivery; Compose validates configuration without starting Docker.
+
+## Continued guest connection investigation
+
+The latest local audit records show guest approval and token issuance followed by LiveKit `participant_connection_aborted` events about 15 seconds later; no successful guest join was recorded. The root transport failure remains unconfirmed without the LiveKit runtime logs.
+
+Removed the forced loopback `rtc.node_ip` so LiveKit can discover the host interfaces while keeping loopback candidates. Initial client join failures now retain the signaling/media distinction and token rejection instead of being masked by a generic disconnected event. Host removal, room closure, and duplicate identity handling remain explicit. Compose configuration validation, **27 frontend tests**, lint, and production build pass. The restricted shell cannot access Docker or open local network sockets; a real host/guest call has not been verified after this change.
