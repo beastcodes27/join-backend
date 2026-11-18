@@ -19,7 +19,7 @@ services:
   livekit:
     # Linux local development: let ICE use host loopback without Docker bridge NAT.
     network_mode: host
-    image: livekit/livekit-server:v1.9.0
+    image: livekit/livekit-server:v1.13.11
     restart: unless-stopped
     environment:
       LIVEKIT_CONFIG: |
