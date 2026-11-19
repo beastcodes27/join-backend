@@ -31,6 +31,8 @@ services:
           use_external_ip: false
           # Discover host interfaces as well as loopback; do not map every ICE candidate to localhost.
           enable_loopback_candidate: true
+          # Firefox hides host IPs behind mDNS names; resolve them so same-machine/LAN guests connect.
+          use_mdns: true
         webhook:
           api_key: ${LIVEKIT_API_KEY:?Set LIVEKIT_API_KEY}
           urls:
